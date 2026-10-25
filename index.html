@@ -1,328 +1,264 @@
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Shoreham Surf</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#082d40;color:#f3fbff;font:15px system-ui,sans-serif}
-header,main{max-width:1100px;margin:auto;padding:12px}
-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
-h1{font-size:21px;margin:0}button,select{font:inherit;font-weight:700;padding:11px;border-radius:10px;border:0}
-button{background:#f4fbff;color:#07374b;touch-action:manipulation}
-select{background:#e8f7fc;color:#07374b;max-width:100%}
-#stage{position:relative;border-radius:15px;overflow:hidden;background:#8bd7e8}
-canvas{display:block;width:100%;height:auto;touch-action:none}
-#hud{position:absolute;top:9px;left:9px;right:9px;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none}
-.pill{padding:6px 9px;border-radius:9px;background:#062b40db;font-size:12px}
-#notice{position:absolute;top:24%;left:50%;transform:translateX(-50%);background:#062b40e8;padding:10px 14px;border-radius:12px;text-align:center;width:max-content;max-width:90%;font-weight:750;pointer-events:none}
-.panel{background:#104257;padding:12px;border-radius:13px;margin-top:10px}
-.flex{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.gauge{height:23px;background:#b54c4c;border-radius:8px;position:relative;overflow:hidden;margin:8px 0}
-.green{position:absolute;left:40%;width:20%;height:100%;background:#36df79}
-#needle{position:absolute;top:0;bottom:0;width:4px;background:white;left:0}
-.controls{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
-.controls button{min-height:48px;padding:8px 4px}
-label{font-size:13px;font-weight:700}input[type=range]{width:100%}
-small{color:#c4e5ef}#weather{line-height:1.6}
-@media(max-width:500px){h1{font-size:17px}.controls button{font-size:12px}.pill{font-size:11px}}
+*{box-sizing:border-box}
+body{margin:0;background:#082b40;color:white;font-family:Arial,sans-serif;overflow:hidden}
+#game{display:block;width:100vw;height:100dvh;touch-action:none}
+#hud{position:fixed;top:10px;left:10px;right:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;pointer-events:none}
+.panel{background:#082333d9;border:1px solid #8ed9e9;border-radius:12px;padding:9px 12px;box-shadow:0 3px 14px #00152255;font-size:13px}
+.panel strong{color:#9af0f4}
+#controls{position:fixed;bottom:14px;left:0;right:0;display:flex;justify-content:space-between;align-items:end;padding:0 16px;gap:10px}
+button,select{border:1px solid #a9f3f8;border-radius:12px;background:#123d52;color:white;padding:12px;font-weight:bold;font-size:14px}
+button{touch-action:none;user-select:none}
+button:active{background:#167d95}
+#steer{display:flex;gap:10px}
+.big{width:68px;height:60px;font-size:23px}
+#rightControls{display:flex;flex-direction:column;gap:8px;align-items:end}
+#message{position:fixed;top:42%;left:0;right:0;text-align:center;font-size:clamp(22px,5vw,42px);font-weight:900;text-shadow:0 3px 8px #003;pointer-events:none}
+#meter{height:9px;background:#50636b;border-radius:10px;overflow:hidden;width:150px;margin-top:5px}
+#meterFill{height:100%;width:0;background:#65ff91}
+#hint{position:fixed;bottom:100px;left:12px;right:12px;text-align:center;font-size:12px;color:#e4fbff;text-shadow:0 1px 5px #001}
+@media(min-width:800px){#controls{padding:0 35px}.big{width:76px;height:65px}}
 </style>
 </head>
 <body>
-<header>
-<h1>🌊 Shoreham Surf</h1>
-<button id="new">↻ New wave</button>
-</header>
-<main>
-<div id="stage">
-<canvas id="cv" width="960" height="540"></canvas>
+<canvas id="game"></canvas>
 <div id="hud">
-<span class="pill" id="status">PADDLING OUT</span>
-<span class="pill" id="score">Score 0</span>
-<span class="pill" id="speed">Speed 0</span>
-<span class="pill" id="waveinfo">Wave -- m</span>
+ <div class="panel"><strong>SHOREHAM SURF</strong><br><span id="status">Paddle out to catch a wave</span></div>
+ <div class="panel">SCORE<br><strong id="score">0</strong></div>
+ <div class="panel">SPEED<br><strong id="speed">0</strong> km/h</div>
+ <div class="panel">BALANCE<br><strong id="balance">100%</strong></div>
+ <div class="panel">DROP-IN TIMING<div id="meter"><div id="meterFill"></div></div></div>
+ <div class="panel" id="forecast">Shoreham forecast<br><strong>Loading…</strong></div>
 </div>
-<div id="notice">Hold PADDLE to build speed. Drop in on green!</div>
+<div id="message">PADDLE OUT</div>
+<div id="hint">Hold PADDLE to build speed • Catch the green zone • Steer to stay on the wave</div>
+<div id="controls">
+ <div id="steer">
+  <button class="big" id="left">◀</button>
+  <button class="big" id="right">▶</button>
+ </div>
+ <button id="paddle">PADDLE</button>
+ <div id="rightControls">
+  <select id="board" aria-label="Surfboard">
+   <option value="0">Longboard</option>
+   <option value="1">Fish</option>
+   <option value="2">Shortboard</option>
+   <option value="3">Gun</option>
+  </select>
+  <button id="restart">NEW WAVE ↻</button>
+ </div>
 </div>
-
-<div class="panel">
-<div class="flex"><b>DROP-IN TIMING</b><span id="timingtext">Build your paddle speed</span></div>
-<div class="gauge"><div class="green"></div><div id="needle"></div></div>
-<small>Press DROP IN when the marker is in the green zone and you have enough speed.</small>
-</div>
-
-<div class="panel">
-<div class="flex"><label for="board">SURFBOARD</label>
-<select id="board">
-<option value="short">Shortboard — quick turns</option>
-<option value="long">Longboard — stable and smooth</option>
-<option value="fish">Fish — fast, loose turns</option>
-<option value="foam">Foam board — forgiving</option>
-<option value="gun">Gun — big-wave control</option>
-</select></div>
-<div id="boarddesc"><small>Responsive, quick turning and less stable.</small></div>
-</div>
-
-<div class="controls">
-<button id="left">◀ LEFT</button>
-<button id="right">RIGHT ▶</button>
-<button id="drop" style="background:#53ed92">DROP IN!</button>
-<button id="paddle" style="grid-column:span 2">🌊 HOLD TO PADDLE</button>
-<button id="pause">Ⅱ PAUSE</button>
-</div>
-
-<div class="panel">
-<div class="flex"><label for="scene">MOVE COAST VIEW</label><span id="scenetext">Shoreham harbour</span></div>
-<input id="scene" type="range" min="0" max="100" value="50">
-<div class="flex"><label for="size">WAVE SIZE (VISUAL)</label><span id="sizetext">Auto</span></div>
-<input id="size" type="range" min="0" max="3" value="0">
-<small>Auto uses the marine forecast when available. Manual settings change the game wave, not the actual sea.</small>
-</div>
-
-<div class="panel" id="weather">
-<b>SHOREHAM CONDITIONS</b><div id="weathertext">Loading forecast…</div>
-<small>Forecast data can be unavailable or differ from conditions at the beach. Check local safety advice before entering the sea.</small>
-</div>
-</main>
-
 <script>
-(()=>{
-const $=id=>document.getElementById(id),c=$('cv'),g=c.getContext('2d');
-const W=960,H=540;
-const boards={
- short:{name:'Shortboard',speed:1.12,turn:1.25,stability:.68,length:39,color:'#ffca52',desc:'Fast and responsive, but harder to balance.'},
- long:{name:'Longboard',speed:.85,turn:.65,stability:1.25,length:58,color:'#f3e4b2',desc:'Stable glide and gentle turns; slower to redirect.'},
- fish:{name:'Fish',speed:1.18,turn:1.05,stability:.86,length:45,color:'#ff806d',desc:'Quick acceleration and loose, playful turns.'},
- foam:{name:'Foam board',speed:.78,turn:.78,stability:1.5,length:52,color:'#ffe5f3',desc:'Very stable, slower and beginner-friendly.'},
- gun:{name:'Gun',speed:.97,turn:.72,stability:1.16,length:53,color:'#b7d6ee',desc:'Built for larger waves; stable at higher speed.'}
-};
-let board=boards.short,phase='ready',paused=false,clock=0,last=performance.now();
-let score=0,speed=0,stamina=0,paddleTime=0,ride=0,marker=0;
-let surferX=480,steer=0,scene=50,manualSize=0,realWave=null,wind=0,temp=null,windDir=null;
-let keys={},touch={left:false,right:false,paddle:false};
-let particles=[];
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function reset(){
- phase='ready';speed=0;stamina=0;paddleTime=0;ride=0;steer=0;
- surferX=480;particles=[];$('notice').textContent='Hold PADDLE to build speed. Drop in on green!';
+(() => {
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id);
+let W=innerWidth,H=innerHeight,DPR=1,last=0,time=0;
+let surferX=.5,depth=.55,forward=0,speed=0,score=0,balance=100;
+let phase='paddle',drop=0,dropWindow=0,steer=0,paddling=false;
+let riderY=0,verticalV=0,pitch=0,roll=0,air=0,wipeout=0;
+let boardType=0,combo=0,best=0,foam=[],particles=[];
+const boards=[
+ {name:'Longboard',speed:0.84,stability:1.45,turn:0.65,color:'#f3d49b',length:1.2},
+ {name:'Fish',speed:1.05,stability:1.05,turn:1.05,color:'#ffad68',length:.92},
+ {name:'Shortboard',speed:1.16,stability:.8,turn:1.35,color:'#e8f6ff',length:.82},
+ {name:'Gun',speed:1.12,stability:1.0,turn:.9,color:'#b7d5ff',length:1.08}
+];
+function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=W*DPR;canvas.height=H*DPR;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0)}
+addEventListener('resize',resize);resize();
+function reset(){surferX=.5;depth=.55;forward=0;speed=0;balance=100;phase='paddle';drop=0;dropWindow=0;steer=0;verticalV=0;pitch=0;roll=0;air=0;wipeout=0;combo=0;$('message').textContent='PADDLE OUT';$('status').textContent='Paddle out to catch a wave';}
+$('restart').onclick=reset;
+$('board').onchange=e=>boardType=+e.target.value;
+function hold(id,down,up){let b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);down()});b.addEventListener('pointerup',e=>{e.preventDefault();up()});b.addEventListener('pointercancel',up);b.addEventListener('lostpointercapture',up)}
+hold('left',()=>steer=-1,()=>{if(steer===-1)steer=0});
+hold('right',()=>steer=1,()=>{if(steer===1)steer=0});
+hold('paddle',()=>paddling=true,()=>paddling=false);
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='a')steer=-1;if(e.key==='ArrowRight'||e.key==='d')steer=1;if(e.code==='Space'||e.key==='ArrowUp')paddling=true});
+addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight','a','d'].includes(e.key))steer=0;if(e.code==='Space'||e.key==='ArrowUp')paddling=false});
+function wave(x,z){
+ const crest=.43+.045*Math.sin(time*.42);
+ const swell=Math.sin(x*5.1-time*1.5+z*2.0);
+ const cross=Math.sin(x*11+time*1.1+z*4);
+ const peak=Math.exp(-Math.pow((x-crest)/.25,2));
+ const h=swell*.43+cross*.1+peak*.45;
+ return {h,swell,peak,crest};
 }
-function chosenWave(){return manualSize===0?clamp((realWave||.8)/1.1,0.65,2.5):manualSize*.8}
-function resize(){/* Stable 960x540 drawing coordinates scale to screen. */}
-function pathHill(offset,base,color,amp){
- g.fillStyle=color;g.beginPath();g.moveTo(0,H);
- for(let x=0;x<=W;x+=5){let y=base+Math.sin((x+offset)*.008)*amp+Math.sin((x+offset)*.019)*amp*.32;
- g.lineTo(x,y)}g.lineTo(W,H);g.closePath();g.fill()
+function project(x,z,h=0){
+ const horizon=H*.32;
+ const yy=horizon+z*(H*.73)-h*(H*.18+z*H*.08);
+ const xx=W*.5+(x-.5)*(W*(.25+z*1.2));
+ return [xx,yy];
 }
-function scenery(){
- let sky=g.createLinearGradient(0,0,0,320);sky.addColorStop(0,'#68c8ed');sky.addColorStop(1,'#f0f8ee');g.fillStyle=sky;g.fillRect(0,0,W,H);
- // sun haze
- let sun=g.createRadialGradient(760,80,5,760,80,115);sun.addColorStop(0,'#fffbd8aa');sun.addColorStop(1,'#fffbd800');g.fillStyle=sun;g.fillRect(630,0,260,210);
- // clouds with parallax movement
- for(let i=0;i<7;i++){
-  let x=((i*177-clock*(3+i%2)-scene*1.5)%1150+1150)%1150-90,y=44+(i%3)*32;
-  g.fillStyle='#ffffffb8';g.beginPath();g.ellipse(x,y,33,11,0,0,7);g.ellipse(x+20,y-8,22,16,0,0,7);g.ellipse(x+40,y,28,10,0,0,7);g.fill();
- }
- // South Downs
- pathHill(scene*.6+clock*1.5,232,'#9fb99b',22);
- pathHill(scene*1.1+clock*2.7,257,'#6d9a79',15);
- pathHill(scene*1.5+clock*4,277,'#4d806c',9);
- // harbour shore
- g.fillStyle='#b6b6a0';g.fillRect(0,277,W,18);
- g.fillStyle='#788d87';g.fillRect(0,289,W,10);
- // buildings move in different depth layers
- for(let i=0;i<45;i++){
-  let x=((i*31-scene*2.4-clock*4)%1350+1350)%1350-190;
-  let y=252+(i%4)*6,w=22+(i%3)*4,h=17+(i%4)*3;
-  g.fillStyle=['#f1e8d7','#e0d3b8','#c7d9d6','#e5bca0'][i%4];g.fillRect(x,y,w,h);
-  g.fillStyle='#a96e5e';g.beginPath();g.moveTo(x-3,y);g.lineTo(x+w/2,y-8);g.lineTo(x+w+3,y);g.fill();
-  g.fillStyle='#7ba6b2';g.fillRect(x+4,y+5,4,6);g.fillRect(x+w-8,y+5,4,6);
- }
- // industrial containers
- for(let i=0;i<16;i++){
-  let x=((i*76-scene*3.5-clock*6)%1300+1300)%1300-160,y=266+(i%3)*8;
-  g.fillStyle=['#c86b51','#d4a34c','#467d89','#a6b4a9'][i%4];g.fillRect(x,y,70,25);
-  g.strokeStyle='#ffffff40';g.lineWidth=1;
-  for(let j=1;j<7;j++){g.beginPath();g.moveTo(x+j*10,y+2);g.lineTo(x+j*10,y+23);g.stroke()}
- }
- // port cranes
- for(let i=0;i<4;i++){
-  let x=((i*265-scene*4-clock*7)%1280+1280)%1280-130,y=260;
-  g.strokeStyle='#c65d47';g.lineWidth=5;g.beginPath();g.moveTo(x,y+30);g.lineTo(x,y-65);g.lineTo(x+75,y-65);g.lineTo(x+75,y-45);g.moveTo(x,y-39);g.lineTo(x+22,y-65);g.stroke();
-  g.strokeStyle='#e9e1d1';g.lineWidth=2;g.beginPath();g.moveTo(x+66,y-45);g.lineTo(x+66,y+4);g.stroke();
- }
- // water depth
- let sea=g.createLinearGradient(0,294,0,H);sea.addColorStop(0,'#46c5c9');sea.addColorStop(.3,'#168eae');sea.addColorStop(1,'#034365');g.fillStyle=sea;g.fillRect(0,294,W,H-294);
- for(let i=0;i<30;i++){
-  let y=300+i*8,x=((i*53-clock*(8+i%4))%1050+1050)%1050-45;
-  g.strokeStyle=`rgba(226,252,255,${.08+(i%5)*.025})`;g.lineWidth=1.5;
-  g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+15,y-3,x+30,y);g.stroke();
- }
+function path(points,fill,stroke=null,width=1){
+ ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
+ if(fill){ctx.closePath();ctx.fillStyle=fill;ctx.fill()}
+ if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke()}
 }
-function wave(){
- const amp=chosenWave()*27,base=400+Math.sin(clock*.6)*5;
- function surfY(x){
-  let peak=surferX+160-clock*26;
-  return base-amp*Math.exp(-Math.pow((x-peak)/(100+chosenWave()*20),2))+Math.sin(x*.015+clock*2)*4;
+function drawSky(){
+ let g=ctx.createLinearGradient(0,0,0,H*.6);g.addColorStop(0,'#71c7e8');g.addColorStop(.65,'#d5f3f2');g.addColorStop(1,'#f7edcf');
+ ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ ctx.fillStyle='#fff5d5';ctx.beginPath();ctx.arc(W*.79,H*.12,27,0,Math.PI*2);ctx.fill();
+ // Shoreham hills and coast
+ path([[0,H*.34],[W*.1,H*.29],[W*.2,H*.32],[W*.34,H*.27],[W*.47,H*.33],[W*.62,H*.29],[W*.75,H*.33],[W,H*.28],[W,H*.43],[0,H*.43]],'#8eae9a');
+ path([[0,H*.36],[W*.12,H*.34],[W*.25,H*.36],[W*.42,H*.33],[W*.57,H*.36],[W*.74,H*.33],[W,H*.35],[W,H*.41],[0,H*.41]],'#b3c9b1');
+ // houses along the shore
+ for(let i=0;i<22;i++){
+  let x=(i/22)*W+Math.sin(i*9)*5,y=H*.33+Math.sin(i*2)*H*.012,s=5+((i*7)%7);
+  ctx.fillStyle=['#f1e5cd','#e8c5a4','#d4dfd4','#e8d8c5'][i%4];
+  ctx.fillRect(x,y,s,s*.7);
+  ctx.fillStyle='#986e61';ctx.beginPath();ctx.moveTo(x-2,y);ctx.lineTo(x+s/2,y-s*.35);ctx.lineTo(x+s+2,y);ctx.fill();
  }
- // wave body
- g.beginPath();g.moveTo(0,H);for(let x=0;x<=W;x+=3)g.lineTo(x,surfY(x));g.lineTo(W,H);g.closePath();
- let gr=g.createLinearGradient(0,base-amp,0,H);gr.addColorStop(0,'#80eee4');gr.addColorStop(.14,'#25b6c7');gr.addColorStop(.65,'#087da3');gr.addColorStop(1,'#034b71');g.fillStyle=gr;g.fill();
- // glassy face streaks
- for(let i=0;i<35;i++){
-  let x=((i*39-clock*(12+i%4))%1050+1050)%1050-45;
-  let y=surfY(x)+20+(i*13%100);
-  g.strokeStyle=`rgba(207,255,248,${.12+(i%5)*.035})`;g.lineWidth=1.4;
-  g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+12,y-4,x+24,y);g.stroke();
- }
- // crest and broken whitewater
- g.beginPath();for(let x=0;x<=W;x+=3){let y=surfY(x);x===0?g.moveTo(x,y):g.lineTo(x,y)}
- g.strokeStyle='#eaffff';g.lineWidth=3+chosenWave();g.stroke();
- for(let i=0;i<70;i++){
-  let x=((i*37-clock*(phase==='ride'?speed*12:10))%1050+1050)%1050-40;
-  let y=surfY(x)+8+(i*17%85);
-  g.fillStyle=`rgba(245,255,255,${.12+(i%5)*.12})`;
-  g.beginPath();g.ellipse(x,y,4+i%9,1.4+i%2,0,0,Math.PI*2);g.fill();
- }
- // spray while riding
- if(phase==='ride')for(let i=0;i<3;i++){
-  particles.push({x:surferX-25,y:373,vx:-30-Math.random()*65,vy:-20-Math.random()*65,life:.5});
- }
- for(let p of particles){p.x+=p.vx*.025;p.y+=p.vy*.025;p.life-=.025;g.fillStyle=`rgba(245,255,255,${Math.max(0,p.life*1.6)})`;g.beginPath();g.arc(p.x,p.y,2.3,0,7);g.fill()}
- particles=particles.filter(p=>p.life>0).slice(-120);
+ // distant breakwater
+ ctx.strokeStyle='#6f817c';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(W*.05,H*.43);ctx.lineTo(W*.35,H*.41);ctx.stroke();
 }
-function limb(x1,y1,x2,y2,width,color){
- g.strokeStyle=color;g.lineWidth=width;g.lineCap='round';g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();
+function drawOcean(){
+ const rows=42,cols=65;
+ for(let r=rows-1;r>=0;r--){
+  const z=.06+(r/rows)*.94;
+  let pts=[];
+  for(let c=0;c<=cols;c++){
+   const x=c/cols,w=wave(x,z),p=project(x,z,w.h);
+   pts.push(p);
+  }
+  const fill=ctx.createLinearGradient(0,H*.32,0,H);
+  fill.addColorStop(0,'#55c9d2');fill.addColorStop(.38,'#138ca9');fill.addColorStop(1,'#03425f');
+  path([...pts,[W,H],[0,H]],fill);
+  ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));
+  ctx.strokeStyle='rgba(188,250,249,'+(.05+z*.2)+')';ctx.lineWidth=.5+z;ctx.stroke();
+ }
+ // animated wave ridges, foam
+ for(let i=0;i<15;i++){
+  const x=((i*.137+time*.018)%1),z=.2+((i*37)%70)/100;
+  const w=wave(x,z),p=project(x,z,w.h+.05);
+  ctx.strokeStyle='rgba(230,255,250,'+(.15+w.peak*.65)+')';ctx.lineWidth=1+z*2;
+  ctx.beginPath();ctx.ellipse(p[0],p[1],(8+z*20)*(1+w.peak),2+z*5,-.06,0,Math.PI*1.2);ctx.stroke();
+ }
+ // crest foam rolls along the wave
+ for(let i=0;i<40;i++){
+  const x=(i/40+time*.025)%1,z=.32+Math.sin(i*12)*.12,w=wave(x,z);
+  if(w.peak>.48){
+   let p=project(x,z,w.h+.16);
+   ctx.fillStyle='rgba(240,255,249,'+Math.min(.9,w.peak)+')';
+   ctx.beginPath();ctx.ellipse(p[0],p[1],3+z*5,1+z*2,0,0,Math.PI*2);ctx.fill();
+  }
+ }
 }
 function drawSurfer(){
- let prone=phase==='ready'||phase==='missed',b=board;
- let bob=prone?Math.sin(paddleTime*8)*2:Math.sin(ride*5)*4;
- let y=prone?437:369+bob;
- g.save();g.translate(surferX,y);g.rotate(prone?0:steer*.18);
- // board outline, nose and tail shape
- let L=b.length/2;
- g.fillStyle='#123f54';g.beginPath();g.moveTo(-L,4);g.quadraticCurveTo(-L+8,-7,0,-6);g.quadraticCurveTo(L-5,-4,L,1);g.quadraticCurveTo(L-7,9,0,9);g.quadraticCurveTo(-L+9,10,-L,4);g.fill();
- g.fillStyle=b.color;g.beginPath();g.moveTo(-L+3,4);g.quadraticCurveTo(-L+10,-3,0,-3);g.quadraticCurveTo(L-6,-1,L-2,2);g.quadraticCurveTo(L-9,6,0,6);g.quadraticCurveTo(-L+10,7,-L+3,4);g.fill();
- g.strokeStyle='#ffffffa8';g.lineWidth=1.5;g.beginPath();g.moveTo(-L+8,3);g.lineTo(L-8,2);g.stroke();
- // wetsuit legs and torso
- if(prone){
-  limb(-9,-7,-22,-2,8,'#173e55');limb(1,-7,17,-2,8,'#173e55');
-  // animated alternating paddle strokes
-  let arm=Math.sin(paddleTime*9)*15;
-  limb(-7,-12,-18+arm,-20,6,'#174b68');
-  limb(3,-12,16-arm,-21,6,'#174b68');
-  limb(-18+arm,-20,-21+arm,-13,4,'#d89a76');
-  limb(16-arm,-21,19-arm,-13,4,'#d89a76');
-  g.fillStyle='#e0a27d';g.beginPath();g.arc(0,-22,9,0,7);g.fill();
-  g.fillStyle='#183c51';g.beginPath();g.arc(0,-26,9,Math.PI,Math.PI*2);g.fill();
+ const b=boards[boardType],x=surferX,z=depth,w=wave(x,z),p=project(x,z,w.h);
+ const sx=p[0],sy=p[1]+(phase==='ride'?-12:2);
+ const scale=.65+z*.85;
+ ctx.save();ctx.translate(sx,sy);ctx.scale(scale,scale);
+ // board shadow
+ ctx.fillStyle='rgba(0,25,40,.24)';ctx.beginPath();ctx.ellipse(0,9,31,7,0,0,Math.PI*2);ctx.fill();
+ // board with perspective angle and pitch
+ ctx.save();ctx.rotate(steer*.13+roll*.13+pitch*.06);
+ ctx.fillStyle='#e9f4ed';ctx.beginPath();ctx.moveTo(-35*b.length,0);ctx.quadraticCurveTo(-29*b.length,-6,0,-5);ctx.quadraticCurveTo(28*b.length,-5,35*b.length,0);ctx.quadraticCurveTo(20*b.length,7,0,6);ctx.quadraticCurveTo(-23*b.length,6,-35*b.length,0);ctx.fill();
+ ctx.fillStyle=b.color;ctx.beginPath();ctx.ellipse(0,0,23*b.length,3.3,0,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#ffffffaa';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-22*b.length,0);ctx.lineTo(23*b.length,0);ctx.stroke();ctx.restore();
+ if(phase==='paddle'){
+  // prone surfer and animated paddling arms
+  ctx.fillStyle='#f1b58a';ctx.beginPath();ctx.ellipse(0,-7,6,11,-.3,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#e44f42';ctx.beginPath();ctx.ellipse(0,-9,5,8,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#f1b58a';ctx.lineWidth=3;
+  let arm=Math.sin(time*13)*5;
+  ctx.beginPath();ctx.moveTo(-2,-9);ctx.lineTo(-12,arm);ctx.moveTo(2,-9);ctx.lineTo(12,-arm);ctx.stroke();
+  ctx.fillStyle='#f0c09c';ctx.beginPath();ctx.arc(0,-19,4,0,Math.PI*2);ctx.fill();
  }else{
-  // bent knees and feet
-  limb(-5,-13,-13,-1,8,'#173e55');limb(-13,-1,-24,1,7,'#173e55');
-  limb(5,-13,12,-1,8,'#173e55');limb(12,-1,24,1,7,'#173e55');
-  // body and rash vest
-  limb(0,-34,0,-15,13,'#17678c');
-  limb(-4,-30,-11,-20,4,'#35a2bd');
-  // arms counterbalance turns
-  let balance=steer*9+Math.sin(ride*4)*3;
-  limb(-3,-31,-22,-39-balance,6,'#17678c');
-  limb(-22,-39-balance,-31,-34-balance,4,'#dba17e');
-  limb(3,-31,22,-39+balance,6,'#17678c');
-  limb(22,-39+balance,31,-34+balance,4,'#dba17e');
-  g.fillStyle='#dfa27d';g.beginPath();g.arc(0,-43,9,0,7);g.fill();
-  g.fillStyle='#17384d';g.beginPath();g.arc(0,-46,9,Math.PI,Math.PI*2);g.fill();
-  // wetsuit seams
-  g.strokeStyle='#c4e5ef';g.lineWidth=1.3;g.beginPath();g.moveTo(0,-31);g.lineTo(0,-17);g.stroke();
+  // crouched stance
+  ctx.strokeStyle='#f0b58e';ctx.lineWidth=4;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(-3,-20);ctx.lineTo(-9,-8);ctx.lineTo(-15,-2);ctx.moveTo(-9,-8);ctx.lineTo(5,-3);ctx.lineTo(13,0);ctx.stroke();
+  ctx.fillStyle='#ee654c';ctx.beginPath();ctx.ellipse(0,-19,7,10,-.25,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#f0b58e';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-2,-21);ctx.lineTo(-12,-15+steer*3);ctx.moveTo(3,-21);ctx.lineTo(13,-17-steer*3);ctx.stroke();
+  ctx.fillStyle='#f1c29f';ctx.beginPath();ctx.arc(1,-32,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#263f4c';ctx.beginPath();ctx.arc(0,-34,5,Math.PI,Math.PI*2);ctx.fill();
  }
- g.restore();
+ ctx.restore();
 }
 function draw(){
- scenery();wave();drawSurfer();
-}
-function drop(){
- if(phase==='ride')return;
- if(phase==='missed'){reset();return}
- if(marker>=.4&&marker<=.6&&stamina>.28){
-  phase='ride';speed=(2.4+stamina*3)*board.speed;ride=0;
-  $('notice').textContent='Clean drop-in! Steer across the face.';
- }else if(marker>.72||marker<.25){
-  phase='missed';speed=0;$('notice').textContent='You missed it! Paddle again and time the green zone.';
- }else $('notice').textContent='Keep paddling. Wait for the green zone!';
+ drawSky();drawOcean();drawSurfer();
+ // spray particles
+ particles.forEach(q=>{ctx.globalAlpha=Math.max(0,q.life);ctx.fillStyle='#f4ffff';ctx.beginPath();ctx.arc(q.x*W,q.y*H,q.size,0,Math.PI*2);ctx.fill()});ctx.globalAlpha=1;
+ // horizon shimmer
+ ctx.fillStyle='#ffffff30';ctx.fillRect(0,H*.32,W,2);
 }
 function update(dt){
- clock+=dt;marker=(Math.sin(clock*1.25)+1)/2;
- if(phase==='ready'){
-  if(touch.paddle||keys.Space){paddleTime+=dt;stamina=clamp(stamina+dt*.15,0,1)}
-  else stamina=clamp(stamina-dt*.018,0,1);
+ time+=dt;
+ const b=boards[boardType],w=wave(surferX,depth);
+ if(phase==='paddle'){
+  if(paddling){speed=Math.min(1.15,speed+dt*.42);depth=Math.max(.36,depth-dt*.035)}
+  else speed=Math.max(0,speed-dt*.16);
+  surferX+=steer*dt*.18;
+  // moving toward the wave
+  if(speed>.28)dropWindow=(Math.sin(time*1.25)+1)/2;
+  if(speed>.48&&w.peak>.62){
+   drop=Math.max(0,1-Math.abs(w.swell)*.9);
+   $('meterFill').style.width=(drop*100)+'%';
+   if(drop>.73){
+    phase='ride';balance=100;score+=Math.round(speed*100);$('message').textContent='POP UP!';
+    $('status').textContent='Ride the face and keep your balance';
+    setTimeout(()=>{if(phase==='ride')$('message').textContent='RIDE THE WAVE'},700);
+   }
+  }else $('meterFill').style.width=(Math.max(0,speed*.3)*100)+'%';
  }else if(phase==='ride'){
-  ride+=dt;
-  let left=keys.ArrowLeft||keys.KeyA||touch.left,right=keys.ArrowRight||keys.KeyD||touch.right;
-  if(left){steer=clamp(steer-dt*board.turn,-1,1);surferX-=130*board.turn*dt}
-  if(right){steer=clamp(steer+dt*board.turn,-1,1);surferX+=130*board.turn*dt}
-  if(!left&&!right)steer*=.96;
-  surferX=clamp(surferX,65,895);
-  speed=clamp(speed+dt*.18,1.2,7.8)*(.999);
-  score+=Math.round(speed*board.speed*dt*5);
-  if(ride>15){phase='missed';$('notice').textContent='Wave finished! Score '+score+'. Start another wave.'}
- }
- $('status').textContent=phase==='ride'?'RIDING '+board.name.toUpperCase():phase==='missed'?'WAVE OVER':stamina>.3?'READY TO DROP IN':'PADDLING OUT';
- $('score').textContent='Score '+score;$('speed').textContent='Speed '+(phase==='ride'?speed.toFixed(1):stamina.toFixed(1));
- $('needle').style.left=marker*100+'%';
- $('timingtext').textContent=phase==='ride'?'Wave caught!':marker>=.4&&marker<=.6?'GREEN — DROP IN!':'Wait for green';
- $('needle').style.background=marker>=.4&&marker<=.6?'#4cff8c':'white';
- $('waveinfo').textContent='Wave '+(realWave===null?'--':realWave.toFixed(1))+' m';
-}
-function frame(now){
- let dt=Math.min((now-last)/1000,.04);last=now;
- if(!paused){update(dt);draw()}
- requestAnimationFrame(frame)
-}
-function bindHold(id,prop){
- let el=$(id);el.addEventListener('pointerdown',e=>{e.preventDefault();touch[prop]=true});
- ['pointerup','pointercancel','pointerleave'].forEach(ev=>el.addEventListener(ev,e=>{touch[prop]=false}));
-}
-bindHold('left','left');bindHold('right','right');bindHold('paddle','paddle');
-$('drop').onclick=drop;$('new').onclick=()=>{score=0;reset()};
-$('pause').onclick=()=>{paused=!paused;$('pause').textContent=paused?'▶ RESUME':'Ⅱ PAUSE';last=performance.now()};
-$('board').onchange=e=>{board=boards[e.target.value];$('boarddesc').innerHTML='<small>'+board.desc+'</small>'};
-$('scene').oninput=e=>{scene=+e.target.value;$('scenetext').textContent=scene<30?'Open coast':scene>70?'Harbour view':'Shoreham coast'};
-$('size').oninput=e=>{manualSize=+e.target.value;$('sizetext').textContent=['Auto','Small','Medium','Large'][manualSize]};
-window.addEventListener('keydown',e=>{
- keys[e.code]=true;
- if(['Space','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code))e.preventDefault();
- if(e.code==='Enter')drop();
- if(e.code==='KeyP')$('pause').click();
-});
-window.addEventListener('keyup',e=>keys[e.code]=false);
-c.addEventListener('pointerdown',()=>{if(phase==='ready')touch.paddle=true});
-c.addEventListener('pointerup',()=>touch.paddle=false);
-c.addEventListener('pointercancel',()=>touch.paddle=false);
-
-// Live Shoreham weather and regional marine forecast.
-// Marine wave height is a model forecast, not a beach sensor.
-async function loadConditions(){
- const lat=50.8338,lon=-0.2732;
- try{
-  const url='https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+'&current=temperature_2m,wind_speed_10m,wind_direction_10m&timezone=Europe%2FLondon';
-  const r=await fetch(url);if(!r.ok)throw Error('weather unavailable');
-  const d=await r.json(),v=d.current;
-  temp=v.temperature_2m;wind=v.wind_speed_10m;windDir=v.wind_direction_10m;
-  $('weathertext').textContent='Air '+temp+'°C · Wind '+wind+' km/h · Direction '+windDir+'°';
- }catch(e){$('weathertext').textContent='Live weather unavailable — check your connection.'}
- try{
-  const url='https://marine-api.open-meteo.com/v1/marine?latitude='+lat+'&longitude='+lon+'&hourly=wave_height&timezone=Europe%2FLondon&forecast_days=2';
-  const r=await fetch(url);if(!r.ok)throw Error();
-  const d=await r.json(),times=d.hourly.time,heights=d.hourly.wave_height;
-  let now=Date.now(),best=0,delta=Infinity;
-  for(let i=0;i<times.length;i++){
-   if(heights[i]!==null){let diff=Math.abs(new Date(times[i]).getTime()-now);if(diff<delta){delta=diff;best=heights[i]}}
+  const slope=Math.cos(surferX*5.1-time*1.5);
+  speed+=dt*(.24+Math.abs(slope)*.18-steer*steer*.09);
+  speed=Math.max(.25,Math.min(1.8,speed));
+  // steer changes position and the line down the wave
+  surferX+=steer*dt*.23*b.turn*(.5+speed);
+  surferX+=Math.sin(time*1.7+surferX*4)*dt*.018;
+  surferX=Math.max(.08,Math.min(.92,surferX));
+  const targetY=w.h*22;
+  verticalV+=(targetY-riderY)*dt*5;
+  verticalV*=Math.pow(.13,dt);
+  riderY+=verticalV*dt;
+  pitch+=(slope*.13-pitch)*dt*2;
+  roll+=(steer*.6-roll)*dt*3;
+  balance-=dt*(Math.abs(steer)*5+Math.abs(slope)*2.2)/b.stability;
+  balance=Math.min(100,balance+dt*(paddling?3:0));
+  score+=Math.round((speed*12+Math.abs(slope)*3)*dt);
+  $('meterFill').style.width=balance+'%';
+  if(Math.random()<dt*16&&Math.abs(steer)>.4){
+   particles.push({x:surferX,y:.55+Math.random()*.12,life:.7,size:1+Math.random()*2});
   }
-  realWave=best;
-  if(manualSize===0)$('sizetext').textContent='Auto · '+best.toFixed(1)+' m forecast';
- }catch(e){
-  $('waveinfo').textContent='Wave forecast unavailable';
+  if(balance<=0||surferX<.045||surferX>.955){
+   phase='wipeout';wipeout=1.4;combo=0;$('message').textContent='WIPEOUT!';
+   $('status').textContent='Paddle out and try again';
+  }
+ }else if(phase==='wipeout'){
+  wipeout-=dt;speed*=Math.pow(.15,dt);
+  if(wipeout<=0){phase='paddle';surferX=.5;depth=.56;speed=0;balance=100;$('message').textContent='PADDLE OUT';}
  }
+ particles=particles.filter(q=>q.life>0);
+ particles.forEach(q=>q.life-=dt);
+ $('score').textContent=score;
+ $('speed').textContent=Math.round(speed*28);
+ $('balance').textContent=Math.max(0,Math.round(balance))+'%';
+ if(phase==='paddle'){$('status').textContent=paddling?'Paddling… build speed':'Paddle out to catch a wave'}
+ if(phase==='ride'&&balance<35)$('message').textContent='KEEP BALANCED!';
 }
-reset();loadConditions();setInterval(loadConditions,10*60*1000);requestAnimationFrame(frame);
+function frame(now){let dt=Math.min(.04,(now-last)/1000||0);last=now;update(dt);draw();requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+// Live weather and marine forecast from Open-Meteo
+async function forecast(){
+ try{
+  const lat=50.8338,lon=-0.2732;
+  const urls=[
+   `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m&timezone=Europe%2FLondon`,
+   `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&current=wave_height,wave_period&timezone=Europe%2FLondon`
+  ];
+  const [a,b]=await Promise.all(urls.map(u=>fetch(u)));
+  if(!a.ok||!b.ok)throw Error('forecast unavailable');
+  const weather=await a.json(),marine=await b.json();
+  const c=weather.current,m=marine.current;
+  $('forecast').innerHTML=`SHOREHAM LIVE<br><strong>${Math.round(c.temperature_2m)}°C · Wind ${Math.round(c.wind_speed_10m)} km/h</strong><br>Waves ${m.wave_height==null?'—':m.wave_height.toFixed(1)+' m'} · Period ${m.wave_period==null?'—':m.wave_period.toFixed(0)+' s'}`;
+ }catch(e){$('forecast').innerHTML='SHOREHAM FORECAST<br><strong>Live forecast unavailable</strong>'}
+}
+forecast();setInterval(forecast,10*60*1000);
 })();
 </script>
 </body>
